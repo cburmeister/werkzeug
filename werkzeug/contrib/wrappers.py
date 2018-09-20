@@ -20,6 +20,7 @@
     :copyright: (c) 2014 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
+import sys
 import codecs
 try:
     from simplejson import loads
@@ -58,7 +59,8 @@ class JSONRequestMixin(object):
         try:
             return loads(self.data.decode(self.charset, self.encoding_errors))
         except Exception:
-            raise BadRequest('Unable to read JSON request')
+            details = sys.exc_info()[1]
+            raise BadRequest('Unable to read JSON request: ' + str(details))
 
 
 class ProtobufRequestMixin(object):

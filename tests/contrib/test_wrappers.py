@@ -11,19 +11,44 @@
 
 from __future__ import with_statement
 
-from werkzeug.contrib import wrappers
+import pytest
+
 from werkzeug import routing
+from werkzeug.contrib import wrappers
+from werkzeug.exceptions import BadRequest
 from werkzeug.wrappers import Request, Response
 
 
 def test_json_request_mixin():
     class MyRequest(wrappers.JSONRequestMixin, Request):
         pass
+
+    # Properly formatted JSON is parsed into a dictionary
     req = MyRequest.from_values(
         data=u'{"foä": "bar"}'.encode('utf-8'),
         content_type='text/json'
     )
     assert req.json == {u'foä': 'bar'}
+
+    # A request missing a JSON content type raises an exception
+    with pytest.raises(BadRequest) as e:
+        req = MyRequest.from_values(
+            data=u'{"foä": "bar"}'.encode('utf-8')
+        )
+        assert req.json == {}
+    assert e.value.description == 'Not a JSON request'
+
+    # A malformed JSON request raises an exception
+    with pytest.raises(BadRequest) as e:
+        req = MyRequest.from_values(
+            data=u'{ 1.2:3.4}'.encode('utf-8'),
+            content_type='text/json'
+        )
+        assert req.json == {}
+    assert e.value.description == (
+        'Unable to read JSON request: Expecting property name enclosed in '
+        'double quotes: line 1 column 3 (char 2)'
+    )
 
 
 def test_reverse_slash_behavior():
